@@ -1,63 +1,214 @@
 package com.phact;
 
-import com.datastax.driver.core.Session;
-import com.datastax.spark.connector.cql.CassandraConnector;
 import com.datastax.spark.connector.japi.CassandraJavaUtil;
+import com.google.common.base.Objects;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.DataFrame;
-import org.apache.spark.sql.cassandra.CassandraSQLContext;
 
 import java.io.Serializable;
+import java.util.Date;
+
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
 
 public class Migrate implements Serializable{
 
-    public Migrate(){
+    /*
+    CREATE TABLE support.search (
+    type text,
+    key text,
+    author text,
+    date text,
+    message_number bigint,
+    search_string text,
+    solr_query text,
+    title text,
+    url text,
+    PRIMARY KEY ((type, key))
+    )
+    */
+
+    public static class Search implements Serializable {
+        private String type;
+        private String key;
+        private String author;
+        private Date date;
+        private Long message_number;
+        private String search_string;
+        private String solr_query;
+        private String title;
+        private String url;
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public void setKey(String key) {
+            this.key = key;
+        }
+
+        public String getAuthor() {
+            return author;
+        }
+
+        public void setAuthor(String author) {
+            this.author = author;
+        }
+
+        public Date getDate() {
+            return date;
+        }
+
+        public void setDate(Date date) {
+            this.date = date;
+        }
+
+        public Long getMessage_number() {
+            return message_number;
+        }
+
+        public void setMessage_number(Long message_number) {
+            this.message_number = message_number;
+        }
+
+        public String getSearch_string() {
+            return search_string;
+        }
+
+        public void setSearch_string(String search_string) {
+            this.search_string = search_string;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public void setTitle(String title) {
+            this.title = title;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public String getSolr_query() {
+            return solr_query;
+        }
+
+        public void setSolr_query(String solr_query) {
+            this.solr_query= solr_query;
+        }
+
+        // Remember to declare no-args constructor
+        public Search() { }
+
+        public Search(String type, String key, String author, Date date, Long message_number, String search_string,String solr_query, String title, String url) {
+            this.type = type;
+            this.key = key;
+            this.author = author;
+            this.date = date;
+            this.message_number = message_number;
+            this.search_string = search_string;
+            this.solr_query = solr_query;
+            this.title = title;
+            this.url = url;
+        }
+
+        // other methods, constructors, etc.
+    }
+
+    public static class Person implements Serializable {
+        private Integer id;
+        private String name;
+
+        public static Person newInstance(Integer id, String name) {
+            Person person = new Person();
+            person.setId(id);
+            person.setName(name);
+            return person;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public void setId(Integer id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String toString() {
+            return Objects.toStringHelper(this)
+                    .add("id", id)
+                    .add("name", name)
+                    .toString();
+        }
+    }
+
+    public Migrate(String keyspaceTable, String sourceIp, String destIp){
+        String[] parts = keyspaceTable.split("\\.");
+        String keyspace = parts[0];
+        String table = parts[1];
 
         SparkConf conf = new SparkConf()
-                .setAppName( "My application");
-                //.forDse;
+                .setAppName( "My application")
+                .set("spark.cassandra.connection.host", sourceIp);;
+
 
         JavaSparkContext jsc = new JavaSparkContext(conf);
-        jsc.setLocalProperty("spark.cassandra.connection.host", "127.0.0.1");
-       
-        CassandraConnector connectorToClusterOne = CassandraConnector.apply(jsc.getConf());
-       
+
+
+        /*
+        CassandraConnector connectorToClusterOne = CassandraConnector.apply(conf);
         try(Session session1 = connectorToClusterOne.openSession() ){
-             session1.execute("SELECT * FROM system.peers");
+             session1.execute("SELECT * FROM " +keyspaceTable);
         }
 
-        JavaRDD<String> stringRdd = CassandraJavaUtil.javaFunctions(jsc)
-                .cassandraTable("system", "peers", CassandraJavaUtil.mapColumnTo(String.class))
-                .select("peer");
-        
         CassandraSQLContext sqlContext1 = new CassandraSQLContext(jsc.sc());
-        DataFrame peers1 = sqlContext1.sql("select * from system.peers");
+        DataFrame peers1 = sqlContext1.sql("select * from "+keyspaceTable);
+        */
 
-        long count1 = peers1.count();
-        System.out.println(count1);
+        JavaRDD<Search> dataRdd = CassandraJavaUtil.javaFunctions(jsc)
+                .cassandraTable(keyspace, table, CassandraJavaUtil.mapRowTo(Search.class));
 
-        jsc.setLocalProperty("spark.cassandra.connection.host", "172.31.21.193");
-        
-        CassandraConnector connectorToClusterTwo = CassandraConnector.apply(jsc.getConf());
 
+        conf.set("spark.cassandra.connection.host", destIp);
+
+        /*
+
+        CassandraConnector connectorToClusterTwo = CassandraConnector.apply(conf);
         try(Session session2 = connectorToClusterTwo.openSession() ){
-             session2.execute("SELECT * FROM system.peers");
+             session2.execute("SELECT * FROM "+keyspaceTable);
         }
- 
-        JavaRDD<String> stringRdd2 = CassandraJavaUtil.javaFunctions(jsc)
-                .cassandraTable("system", "peers", CassandraJavaUtil.mapColumnTo(String.class))
-                .select("peer");
-
-        
         CassandraSQLContext sqlContext2 = new CassandraSQLContext(jsc.sc());
-        DataFrame peers2 = sqlContext2.sql("select * from system.peers");
+        DataFrame peers2 = sqlContext2.sql("select * from "+keyspaceTable);
+        */
 
 
+        javaFunctions(dataRdd).writerBuilder(keyspace, table, mapToRow(Search.class)).saveToCassandra();
 
-        long count2 = peers2.count();
-        System.out.println(count2);
+
 
     }
 }
