@@ -40,7 +40,7 @@
             <artifactId>dse</artifactId>
             <version>4.8.0</version>
             <scope>system</scope>
-            <systemPath>/Users/sebastianestevez/Documents/dse/lib/dse-core-5.0.0.jar</systemPath>
+            <systemPath>{YOUR PATH TO DSE.JAR}/Documents/dse/lib/dse-core-4.8.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
