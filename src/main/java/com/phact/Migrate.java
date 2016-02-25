@@ -1,5 +1,6 @@
 package com.phact;
 
+import com.datastax.spark.connector.cql.CassandraConnector;
 import com.datastax.spark.connector.japi.CassandraJavaUtil;
 import com.google.common.base.Objects;
 import org.apache.spark.SparkConf;
@@ -176,11 +177,7 @@ public class Migrate implements Serializable{
                 .set("spark.cassandra.connection.host", sourceIp);;
 
 
-        JavaSparkContext jsc = new JavaSparkContext(conf);
-
-
         /*
-        CassandraConnector connectorToClusterOne = CassandraConnector.apply(conf);
         try(Session session1 = connectorToClusterOne.openSession() ){
              session1.execute("SELECT * FROM " +keyspaceTable);
         }
@@ -189,11 +186,12 @@ public class Migrate implements Serializable{
         DataFrame peers1 = sqlContext1.sql("select * from "+keyspaceTable);
         */
 
-        JavaRDD<Search> dataRdd = CassandraJavaUtil.javaFunctions(jsc)
+        JavaRDD<Search> dataRdd = CassandraJavaUtil.javaFunctions(new JavaSparkContext(conf))
                 .cassandraTable(keyspace, table, CassandraJavaUtil.mapRowTo(Search.class));
 
-
         conf.set("spark.cassandra.connection.host", destIp);
+        CassandraConnector connectorToClusterTwo = CassandraConnector.apply(conf);
+
 
         /*
 
@@ -206,7 +204,7 @@ public class Migrate implements Serializable{
         */
 
 
-        javaFunctions(dataRdd).writerBuilder(keyspace, table, mapToRow(Search.class)).saveToCassandra();
+        javaFunctions(dataRdd).writerBuilder(keyspace, table, mapToRow(Search.class)).withConnector(connectorToClusterTwo).saveToCassandra();
 
 
 
