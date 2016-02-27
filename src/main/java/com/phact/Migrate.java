@@ -20,7 +20,7 @@ public class Migrate implements Serializable{
     type text,
     key text,
     author text,
-    date text,
+    date timestamp,
     message_number bigint,
     search_string text,
     solr_query text,

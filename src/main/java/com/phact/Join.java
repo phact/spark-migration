@@ -5,7 +5,6 @@ import com.datastax.spark.connector.japi.CassandraJavaUtil;
 import com.datastax.spark.connector.japi.rdd.CassandraTableScanJavaRDD;
 import com.google.common.base.Objects;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 
 import java.io.Serializable;
@@ -176,19 +175,12 @@ public class Join {
                 .set("spark.cassandra.connection.host", sourceIp);;
 
 
-        /*
-        try(Session session1 = connectorToClusterOne.openSession() ){
-             session1.execute("SELECT * FROM " +keyspaceTable);
-        }
-
-        CassandraSQLContext sqlContext1 = new CassandraSQLContext(jsc.sc());
-        DataFrame peers1 = sqlContext1.sql("select * from "+keyspaceTable);
-        */
-
         JavaSparkContext myContext = new JavaSparkContext(conf);
 
-        JavaRDD<Search> dataRdd = CassandraJavaUtil.javaFunctions(myContext)
+        CassandraTableScanJavaRDD<Search> dataRdd = CassandraJavaUtil.javaFunctions(myContext)
                 .cassandraTable(keyspace, table, CassandraJavaUtil.mapRowTo(Search.class));
+
+
 
         conf.set("spark.cassandra.connection.host", destIp);
         CassandraConnector connectorToClusterTwo = CassandraConnector.apply(conf);
@@ -196,22 +188,10 @@ public class Join {
         CassandraTableScanJavaRDD<Search> dataRdd2 = CassandraJavaUtil.javaFunctions(myContext).
                 cassandraTable(keyspace, table, CassandraJavaUtil.mapRowTo(Search.class));
 
-        //dataRdd2.withConnector(connectorToClusterTwo);
-
+        dataRdd2 = dataRdd2.withConnector(connectorToClusterTwo);
 
         System.out.println(dataRdd.count());
         System.out.println(dataRdd2.count());
-        /*
-
-        CassandraConnector connectorToClusterTwo = CassandraConnector.apply(conf);
-        try(Session session2 = connectorToClusterTwo.openSession() ){
-             session2.execute("SELECT * FROM "+keyspaceTable);
-        }
-        CassandraSQLContext sqlContext2 = new CassandraSQLContext(jsc.sc());
-        DataFrame peers2 = sqlContext2.sql("select * from "+keyspaceTable);
-        */
-
-
 
 
 
