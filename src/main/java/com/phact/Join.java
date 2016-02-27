@@ -2,6 +2,7 @@ package com.phact;
 
 import com.datastax.spark.connector.cql.CassandraConnector;
 import com.datastax.spark.connector.japi.CassandraJavaUtil;
+import com.datastax.spark.connector.japi.rdd.CassandraTableScanJavaRDD;
 import com.google.common.base.Objects;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
@@ -10,12 +11,10 @@ import org.apache.spark.api.java.JavaSparkContext;
 import java.io.Serializable;
 import java.util.Date;
 
-import static com.datastax.spark.connector.japi.CassandraJavaUtil.javaFunctions;
-import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
+public class Join {
 
-public class Migrate implements Serializable{
 
-    /*
+       /*
     CREATE TABLE support.search (
     type text,
     key text,
@@ -167,7 +166,7 @@ public class Migrate implements Serializable{
         }
     }
 
-    public Migrate(String keyspaceTable, String sourceIp, String destIp){
+    public Join(String keyspaceTable, String sourceIp, String destIp){
         String[] parts = keyspaceTable.split("\\.");
         String keyspace = parts[0];
         String table = parts[1];
@@ -194,9 +193,14 @@ public class Migrate implements Serializable{
         conf.set("spark.cassandra.connection.host", destIp);
         CassandraConnector connectorToClusterTwo = CassandraConnector.apply(conf);
 
-        JavaRDD<Search> dataRdd2 = CassandraJavaUtil.javaFunctions(myContext).cassandraTable(keyspace, table, CassandraJavaUtil.mapRowTo(Search.class));
+        CassandraTableScanJavaRDD<Search> dataRdd2 = CassandraJavaUtil.javaFunctions(myContext).
+                cassandraTable(keyspace, table, CassandraJavaUtil.mapRowTo(Search.class));
 
-        System.out.println(dataRdd2);
+        //dataRdd2.withConnector(connectorToClusterTwo);
+
+
+        System.out.println(dataRdd.count());
+        System.out.println(dataRdd2.count());
         /*
 
         CassandraConnector connectorToClusterTwo = CassandraConnector.apply(conf);
@@ -208,9 +212,9 @@ public class Migrate implements Serializable{
         */
 
 
-        javaFunctions(dataRdd).writerBuilder(keyspace, table, mapToRow(Search.class)).withConnector(connectorToClusterTwo).saveToCassandra();
 
 
 
     }
+
 }
